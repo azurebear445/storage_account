@@ -1,0 +1,131 @@
+Story 1: Core Azure Storage Account Module Development
+Summary
+Create Azure Storage Account Terraform module with basic features (versioning, encryption, HTTPS enforcement)
+Description
+Develop a reusable Terraform source module for Azure Storage Accounts that replicates core AWS S3 bucket functionality. This module will be referenced by other teams for standardized storage provisioning.
+Key Requirements:
+
+Create module structure: main.tf, variables.tf, outputs.tf, tags.tf, versions.tf
+Implement Azure Storage Account with one blob container (1:1 mapping with AWS S3 bucket)
+Support versioning, HTTPS enforcement, and encryption (PMK/CMK options)
+Maintain same variable naming as AWS module where possible (enable_versioning, enable_cmk_encryption, force_https_uploads)
+Implement RBAC-based access control (Azure equivalent of IAM policies)
+Apply standardized tagging with same validation rules as AWS module
+
+Technical Scope:
+
+Resources: azurerm_storage_account, azurerm_storage_container
+Variables: namespace, environment, enable_versioning, enable_cmk_encryption, force_https_uploads, tags
+Outputs: storage_account_id, container_name, primary_blob_endpoint
+
+Acceptance Criteria
+
+ Module creates Azure Storage Account with lowercase alphanumeric naming from namespace+environment
+ Module creates one blob container per storage account
+ Blob versioning can be enabled/disabled via enable_versioning variable (default: true)
+ HTTPS-only traffic enforced when force_https_uploads = true (default: true)
+ Encryption supports both Platform-Managed Keys (PMK) and Customer-Managed Keys (CMK via Key Vault)
+ Tag validation enforces required keys: architecture, owner, purpose, terraform_resource, and one of (appid/appgsid/project/serviceid)
+ Module follows same file structure as AWS module (main.tf, variables.tf, outputs.tf, tags.tf, versions.tf)
+ Code includes inline comments explaining Azure-specific differences from AWS
+
+Story Points
+3
+Definition of Done (DOD)
+
+ All Terraform files created with proper formatting (terraform fmt)
+ Module validates successfully (terraform validate)
+ Variables have proper descriptions and default values
+ Outputs provide storage account ID, container name, and endpoints
+ Tag merging logic implemented (similar to AWS tags.tf)
+ Code reviewed and pushed to repository
+ No hardcoded values; all configurable via variables
+
+
+Story 2: Lifecycle Management and Advanced Features
+Summary
+Add lifecycle policies, storage tiering, and diagnostic logging to Azure Storage Account module
+Description
+Extend the Azure Storage Account module with lifecycle management policies and centralized audit logging to match AWS S3 bucket advanced features.
+Key Requirements:
+
+Implement lifecycle management policies for automatic storage tiering (Hot → Cool → Archive)
+Map AWS storage classes to Azure equivalents (GLACIER → Archive, INTELLIGENT_TIERING → Hot with lifecycle, etc.)
+Configure diagnostic logging to central storage account (replicate AWS CloudTrail-like behavior)
+Support lifecycle prefix filtering and transition days configuration
+Enable/disable lifecycle policies via variable (enable_lifecycle, default: true)
+
+Technical Scope:
+
+Resources: azurerm_storage_management_policy, azurerm_monitor_diagnostic_setting
+Variables: enable_lifecycle, lifecycle_days, storage_class, lifecycle_prefix
+Storage class mapping validation: INTELLIGENT_TIERING, GLACIER, DEEP_ARCHIVE, STANDARD_IA, ONEZONE_IA
+
+Acceptance Criteria
+
+ Lifecycle policy can be enabled/disabled via enable_lifecycle variable (default: true)
+ Lifecycle transitions objects based on lifecycle_days variable (default: 0 = disabled)
+ Storage class variable accepts AWS-style values and maps to Azure tiers correctly
+ Lifecycle prefix filter works (e.g., only apply to "archive/" prefix)
+ Diagnostic logs send to centralized storage account (naming: saauditlogs{subscription-id}{region})
+ Lifecycle configuration ID follows pattern: {namespace}-{environment}-{storage_class}
+ Module handles lifecycle_days = 0 gracefully (no transition configured)
+
+Story Points
+2
+Definition of Done (DOD)
+
+ Lifecycle management policy resource created with proper rule configuration
+ Storage class validation logic implemented with error messages
+ Diagnostic settings configured to send logs to central audit storage account
+ Lifecycle prefix filtering tested and working
+ All lifecycle variables have defaults matching AWS module behavior
+ Code handles edge cases (lifecycle disabled, days = 0, no prefix specified)
+ Documentation updated with lifecycle examples
+
+
+Story 3: Testing, Examples, and Documentation
+Summary
+Create sandbox test examples, validate module functionality, and write comprehensive documentation
+Description
+Develop test configurations for Azure sandbox subscription, validate module deployment, and create documentation for teams to consume this source module.
+Key Requirements:
+
+Create example configurations in /examples folder with sample .tfvars
+Test module deployment in Azure sandbox subscription
+Verify all features work: versioning, encryption, lifecycle, RBAC, logging
+Write README.md with usage examples, variable documentation, and AWS-to-Azure feature mapping
+Document Azure-specific limitations (e.g., no ACLs, storage account naming constraints)
+Create troubleshooting guide for common issues
+
+Technical Scope:
+
+Example configurations: basic, advanced with lifecycle, CMK encryption example
+Sample tags matching company standards
+Test namespace transformations (handle special characters for Azure naming)
+Validate RBAC assignments, encryption key references, lifecycle policies
+
+Acceptance Criteria
+
+ At least 2 example configurations created: basic and advanced
+ Basic example successfully deploys storage account + container in sandbox
+ Advanced example tests lifecycle policy, CMK encryption, custom tags
+ README.md includes feature comparison table (AWS vs Azure)
+ README.md documents all input variables with descriptions and defaults
+ README.md shows module usage example with required and optional variables
+ Documentation explains Azure naming constraints and auto-transformation logic
+ Outputs section documented with example values
+ Known limitations documented (ACLs not available, RBAC used instead, etc.)
+
+Story Points
+1
+Definition of Done (DOD)
+
+ Examples folder created with working configurations
+ Module successfully deploys to Azure sandbox subscription
+ Terraform plan/apply completes without errors
+ All resources created with correct tags and configurations
+ README.md complete with sections: Overview, Features, Usage, Variables, Outputs, Examples, Limitations
+ Storage account and container visible in Azure Portal with correct settings
+ Versioning, encryption, HTTPS, and lifecycle verified in Azure Portal
+ Module ready for team consumption and code review
