@@ -1,48 +1,158 @@
-Story 1: Core Azure Storage Account Module Development
+Azure Storage Account Module - Jira Stories (Updated)
+Story Overview
+Total: 4 stories, 6 points (fits one sprint)
+Story #TitlePointsFocus1ABasic module structure and storage account creation1Foundation1BVersioning, encryption, and RBAC2Security features2Lifecycle management and diagnostic logging2Advanced features3Testing, examples, and documentation1Validation
+
+Story 1A: Basic Module Structure and Storage Account Creation
 Summary
-Create Azure Storage Account Terraform module with basic features (versioning, encryption, HTTPS enforcement)
+Create foundational Azure Storage Account Terraform module structure with basic storage account and container resources
 Description
-Develop a reusable Terraform source module for Azure Storage Accounts that replicates core AWS S3 bucket functionality. This module will be referenced by other teams for standardized storage provisioning.
+Set up the basic Terraform module structure for Azure Storage Accounts that will serve as a reusable source module for other teams. This story focuses on the foundational infrastructure: module file structure, storage account creation, container creation, basic variables, and outputs.
 Key Requirements:
 
-Create module structure: main.tf, variables.tf, outputs.tf, tags.tf, versions.tf
-Implement Azure Storage Account with one blob container (1:1 mapping with AWS S3 bucket)
-Support versioning, HTTPS enforcement, and encryption (PMK/CMK options)
-Maintain same variable naming as AWS module where possible (enable_versioning, enable_cmk_encryption, force_https_uploads)
-Implement RBAC-based access control (Azure equivalent of IAM policies)
-Apply standardized tagging with same validation rules as AWS module
+Create module file structure: main.tf, variables.tf, outputs.tf, tags.tf, versions.tf
+Implement Azure Storage Account resource
+Implement blob container resource (1:1 mapping with AWS S3 bucket)
+Handle Azure naming constraints (3-24 chars, lowercase, alphanumeric only)
+Implement namespace transformation logic for Azure-compliant names
+Create basic variables: namespace, environment, resource_group_name, location
+Set up tag merging logic (same pattern as AWS module)
+Configure basic outputs: storage_account_id, container_name, primary_blob_endpoint
 
 Technical Scope:
 
-Resources: azurerm_storage_account, azurerm_storage_container
-Variables: namespace, environment, enable_versioning, enable_cmk_encryption, force_https_uploads, tags
-Outputs: storage_account_id, container_name, primary_blob_endpoint
+Resources:
+
+azurerm_storage_account
+azurerm_storage_container
+
+
+Data sources:
+
+azurerm_client_config (get subscription ID)
+azurerm_resource_group (if needed)
+
+
+Variables (basic set):
+
+namespace (required) - with validation
+environment (required) - with validation (box/dev/dr/prod/qa/stage/uat)
+resource_group_name (required)
+location (required)
+account_tier (default: "Standard")
+account_replication_type (default: "GRS")
+tags (required) - with same validation as AWS
+
+
 
 Acceptance Criteria
 
- Module creates Azure Storage Account with lowercase alphanumeric naming from namespace+environment
- Module creates one blob container per storage account
- Blob versioning can be enabled/disabled via enable_versioning variable (default: true)
- HTTPS-only traffic enforced when force_https_uploads = true (default: true)
- Encryption supports both Platform-Managed Keys (PMK) and Customer-Managed Keys (CMK via Key Vault)
+ Module directory structure created with all 5 required files (main.tf, variables.tf, outputs.tf, tags.tf, versions.tf)
+ Storage account resource creates successfully with valid naming
+ Naming transformation logic converts namespace+environment to Azure-compliant name (lowercase, alphanumeric, 3-24 chars)
+ One blob container created per storage account with name format: {namespace}-{environment}-container
+ Environment variable validation enforces: box, dev, dr, prod, qa, stage, uat
+ Namespace variable validates: lowercase only, max 32 characters
  Tag validation enforces required keys: architecture, owner, purpose, terraform_resource, and one of (appid/appgsid/project/serviceid)
- Module follows same file structure as AWS module (main.tf, variables.tf, outputs.tf, tags.tf, versions.tf)
- Code includes inline comments explaining Azure-specific differences from AWS
+ Tags.tf merges user tags with system-generated tags (similar to AWS module)
+ Outputs provide: storage_account_id, storage_account_name, container_name, primary_blob_endpoint, subscription_id, location
+ Code passes terraform fmt and terraform validate
+ Module uses azurerm provider version >= 4.0
 
 Story Points
-3
+1
 Definition of Done (DOD)
 
- All Terraform files created with proper formatting (terraform fmt)
- Module validates successfully (terraform validate)
- Variables have proper descriptions and default values
- Outputs provide storage account ID, container name, and endpoints
- Tag merging logic implemented (similar to AWS tags.tf)
- Code reviewed and pushed to repository
- No hardcoded values; all configurable via variables
+ All 5 Terraform files created (main.tf, variables.tf, outputs.tf, tags.tf, versions.tf)
+ Code formatted with terraform fmt
+ Module validates with terraform validate (no errors)
+ Storage account naming logic handles edge cases (long names, special characters, uppercase conversion)
+ Tag merging creates combined tag map from user input + system tags
+ All variables have descriptions and appropriate defaults
+ Outputs are properly typed and described
+ Code pushed to repository with meaningful commit message
+ Inline comments explain Azure-specific constraints (naming, resource structure)
 
 
-Story 2: Lifecycle Management and Advanced Features
+Story 1B: Versioning, Encryption, and RBAC
+Summary
+Add versioning, encryption (PMK/CMK), HTTPS enforcement, and RBAC access control to Azure Storage Account module
+Description
+Extend the basic Azure Storage Account module with security and data protection features: blob versioning, encryption options, HTTPS-only enforcement, and RBAC-based access control to replicate AWS S3 security features.
+Key Requirements:
+
+Implement blob versioning (replicates AWS S3 versioning)
+Configure HTTPS-only traffic enforcement (replaces AWS force_https_uploads policy)
+Support Platform-Managed Keys (PMK) encryption by default
+Support Customer-Managed Keys (CMK) via Azure Key Vault
+Implement RBAC role assignments (Azure equivalent of IAM bucket policies)
+Add minimum TLS version enforcement
+Configure soft delete for blob recovery
+Add Azure-specific security variables
+
+Technical Scope:
+
+Storage account properties:
+
+blob_properties.versioning_enabled
+blob_properties.delete_retention_policy (soft delete)
+enable_https_traffic_only
+min_tls_version
+
+
+Encryption configuration:
+
+Default: Platform-Managed Keys
+Optional: Customer-Managed Keys via Key Vault
+
+
+Resources (optional):
+
+azurerm_role_assignment for RBAC
+
+
+Variables to add:
+
+enable_versioning (default: true)
+enable_cmk_encryption (default: true)
+key_vault_key_id (for CMK)
+force_https_uploads (default: true)
+min_tls_version (default: "TLS1_2")
+soft_delete_retention_days (default: 7)
+
+
+
+Acceptance Criteria
+
+ Blob versioning can be enabled/disabled via enable_versioning variable (default: true)
+ When versioning enabled, blob_properties.versioning_enabled set to true
+ HTTPS-only traffic enforced when force_https_uploads = true via enable_https_traffic_only
+ Platform-Managed encryption enabled by default (no additional config needed)
+ Customer-Managed Key encryption works when enable_cmk_encryption = true and key_vault_key_id provided
+ Validation ensures key_vault_key_id is not empty when enable_cmk_encryption = true
+ Minimum TLS version set to TLS1_2 by default (configurable)
+ Soft delete configured with retention period (default 7 days)
+ RBAC role assignment structure documented (even if not auto-assigned in module)
+ All security variables have proper defaults matching AWS module behavior
+
+Story Points
+2
+Definition of Done (DOD)
+
+ Versioning configuration implemented and tested
+ HTTPS-only enforcement working (rejects HTTP connections)
+ PMK encryption verified (default behavior)
+ CMK encryption tested with Key Vault key reference
+ Validation logic prevents enable_cmk_encryption=true with empty key_vault_key_id
+ TLS version enforcement configured
+ Soft delete tested (deleted blobs recoverable within retention period)
+ Code includes comments explaining AWS vs Azure differences (bucket policies → RBAC)
+ All new variables documented with descriptions
+ Error handling for invalid encryption configurations
+ Code reviewed and follows module patterns from Story 1A
+
+
+Story 2: Lifecycle Management and Diagnostic Logging
 Summary
 Add lifecycle policies, storage tiering, and diagnostic logging to Azure Storage Account module
 Description
@@ -57,31 +167,59 @@ Enable/disable lifecycle policies via variable (enable_lifecycle, default: true)
 
 Technical Scope:
 
-Resources: azurerm_storage_management_policy, azurerm_monitor_diagnostic_setting
-Variables: enable_lifecycle, lifecycle_days, storage_class, lifecycle_prefix
-Storage class mapping validation: INTELLIGENT_TIERING, GLACIER, DEEP_ARCHIVE, STANDARD_IA, ONEZONE_IA
+Resources:
+
+azurerm_storage_management_policy
+azurerm_monitor_diagnostic_setting
+
+
+Variables:
+
+enable_lifecycle (default: true)
+lifecycle_days (default: 0)
+storage_class with validation
+lifecycle_prefix (default: "")
+
+
+Storage class mapping logic:
+
+INTELLIGENT_TIERING → Hot (with lifecycle to Cool)
+STANDARD_IA → Cool
+ONEZONE_IA → Cool (LRS)
+GLACIER → Archive
+DEEP_ARCHIVE → Archive
+
+
 
 Acceptance Criteria
 
  Lifecycle policy can be enabled/disabled via enable_lifecycle variable (default: true)
  Lifecycle transitions objects based on lifecycle_days variable (default: 0 = disabled)
- Storage class variable accepts AWS-style values and maps to Azure tiers correctly
+ Storage class variable accepts AWS-style values: INTELLIGENT_TIERING, GLACIER, DEEP_ARCHIVE, STANDARD_IA, ONEZONE_IA
+ Storage class validation provides clear error messages for invalid values
+ Storage class mapping logic converts AWS names to Azure actions correctly
  Lifecycle prefix filter works (e.g., only apply to "archive/" prefix)
- Diagnostic logs send to centralized storage account (naming: saauditlogs{subscription-id}{region})
+ When lifecycle_prefix empty, lifecycle applies to entire container
+ Diagnostic logs send to centralized storage account with naming: saauditlogs{subscription-id}{location}
  Lifecycle configuration ID follows pattern: {namespace}-{environment}-{storage_class}
  Module handles lifecycle_days = 0 gracefully (no transition configured)
+ Lifecycle rules only created when enable_lifecycle = true
 
 Story Points
 2
 Definition of Done (DOD)
 
  Lifecycle management policy resource created with proper rule configuration
- Storage class validation logic implemented with error messages
+ Storage class validation logic implemented with error messages for invalid values
+ Storage class mapping tested for all AWS values (GLACIER, INTELLIGENT_TIERING, etc.)
  Diagnostic settings configured to send logs to central audit storage account
- Lifecycle prefix filtering tested and working
+ Lifecycle prefix filtering tested (with prefix and without prefix)
+ Lifecycle days = 0 handled correctly (no errors, no transitions)
  All lifecycle variables have defaults matching AWS module behavior
- Code handles edge cases (lifecycle disabled, days = 0, no prefix specified)
- Documentation updated with lifecycle examples
+ Code handles edge cases: lifecycle disabled, days = 0, no prefix specified, invalid storage class
+ Documentation updated with lifecycle examples and storage class mapping table
+ Terraform plan shows correct lifecycle rules when enabled
+ No lifecycle resources created when enable_lifecycle = false
 
 
 Story 3: Testing, Examples, and Documentation
@@ -100,32 +238,80 @@ Create troubleshooting guide for common issues
 
 Technical Scope:
 
-Example configurations: basic, advanced with lifecycle, CMK encryption example
-Sample tags matching company standards
+Example configurations:
+
+examples/basic/ - Simple storage account with defaults
+examples/advanced/ - Full features: lifecycle, CMK encryption, custom tags
+
+
 Test namespace transformations (handle special characters for Azure naming)
 Validate RBAC assignments, encryption key references, lifecycle policies
+Documentation:
+
+README.md with complete variable reference
+Feature comparison table (AWS vs Azure)
+Common troubleshooting scenarios
+
+
 
 Acceptance Criteria
 
  At least 2 example configurations created: basic and advanced
- Basic example successfully deploys storage account + container in sandbox
- Advanced example tests lifecycle policy, CMK encryption, custom tags
- README.md includes feature comparison table (AWS vs Azure)
- README.md documents all input variables with descriptions and defaults
- README.md shows module usage example with required and optional variables
- Documentation explains Azure naming constraints and auto-transformation logic
- Outputs section documented with example values
- Known limitations documented (ACLs not available, RBAC used instead, etc.)
+ Basic example successfully deploys storage account + container in sandbox subscription
+ Basic example uses minimal variables (namespace, environment, resource_group, location, tags)
+ Advanced example tests lifecycle policy with transition days, CMK encryption with Key Vault, custom tags
+ README.md includes feature comparison table showing AWS vs Azure equivalents
+ README.md documents all input variables with: name, type, description, default value, required/optional
+ README.md shows complete module usage example with required and optional variables
+ README.md explains Azure naming constraints and how module handles transformations
+ Outputs section in README shows example output values
+ Known limitations documented: ACLs not available (use RBAC), bucket policies replaced with RBAC, storage account naming restrictions
+ Troubleshooting section includes: naming errors, Key Vault permissions, RBAC assignment issues
+ Examples include sample tag values matching company standards
 
 Story Points
 1
 Definition of Done (DOD)
 
- Examples folder created with working configurations
- Module successfully deploys to Azure sandbox subscription
- Terraform plan/apply completes without errors
- All resources created with correct tags and configurations
- README.md complete with sections: Overview, Features, Usage, Variables, Outputs, Examples, Limitations
- Storage account and container visible in Azure Portal with correct settings
- Versioning, encryption, HTTPS, and lifecycle verified in Azure Portal
- Module ready for team consumption and code review
+ Examples folder created with structure: examples/basic/ and examples/advanced/
+ Basic example deploys successfully with terraform apply in sandbox
+ Advanced example deploys successfully with all features enabled
+ Terraform plan/apply completes without errors for both examples
+ All resources created with correct tags and configurations visible in Azure Portal
+ README.md complete with sections: Overview, Features, Usage, Variables, Outputs, Examples, Limitations, Troubleshooting
+ README.md includes the AWS-to-Azure feature mapping document as appendix or separate reference
+ Storage account and container visible and accessible in Azure Portal
+ Versioning, encryption, HTTPS, lifecycle, and logging verified in Azure Portal settings
+ Module ready for team consumption (can be referenced via git source)
+ Code review completed with team lead approval
+ Module tagged/released in repository for teams to use
+
+
+Sprint Planning Summary
+Story Sequence Recommendation
+
+Story 1A (1 pt) - Week 1, Days 1-2: Foundation, get basic structure working
+Story 1B (2 pts) - Week 1-2, Days 3-5: Add security features on top of foundation
+Story 2 (2 pts) - Week 2, Days 6-8: Extend with lifecycle and logging
+Story 3 (1 pt) - Week 2, Days 9-10: Validate, document, finalize
+
+Dependencies
+
+Story 1B depends on Story 1A (needs basic structure)
+Story 2 depends on Story 1A (needs storage account resource)
+Story 3 depends on Stories 1A, 1B, and 2 (needs complete module to test)
+
+Risk Mitigation
+
+If Story 1B or 2 slips, Story 3 can still document what's completed
+Each story delivers working code (incremental value)
+Early validation in Story 1A catches Azure naming/structure issues
+
+
+Questions to Ask During Sprint Planning
+
+Do we have access to Azure Key Vault in sandbox for Story 1B CMK testing?
+Is there a pre-existing central audit storage account, or do we need to create one for Story 2?
+What resource group should be used for sandbox testing?
+Are there existing Azure RBAC role assignments we should follow for Story 1B?
+Should examples use real company tag values or sanitized examples?
