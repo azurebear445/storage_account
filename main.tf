@@ -3,17 +3,22 @@
 #------------------------------------------------------------------------------
 data "azurerm_client_config" "current" {}
 
-data "azurerm_resource_group" "main" {
-  name = var.resource_group_name
-}
+# Option 1: Use existing resource group (uncomment when needed)
+# data "azurerm_resource_group" "main" {
+#   name = var.resource_group_name
+# }
 
 #------------------------------------------------------------------------------
 # Azure Storage Account
 #------------------------------------------------------------------------------
 resource "azurerm_storage_account" "this" {
   name                = local.storage_account_name
-  resource_group_name = data.azurerm_resource_group.main.name
+  resource_group_name = var.resource_group_name  # Direct reference for testing
   location            = var.location
+
+  # If using existing resource group (Option 1), change above two lines to:
+  # resource_group_name = data.azurerm_resource_group.main.name
+  # location            = data.azurerm_resource_group.main.location
 
   account_tier             = var.account_tier
   account_replication_type = var.account_replication_type

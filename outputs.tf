@@ -45,8 +45,11 @@ output "location" {
 }
 
 output "resource_group_name" {
-  value       = data.azurerm_resource_group.main.name
+  value       = azurerm_storage_account.this.resource_group_name
   description = "The resource group name."
+
+  # If using existing resource group (Option 1), change to:
+  # value = data.azurerm_resource_group.main.name
 }
 
 output "namespace" {
