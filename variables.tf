@@ -193,3 +193,88 @@ variable "container_access_type" {
     error_message = "Container access type must be one of: private, blob, container."
   }
 }
+
+#------------------------------------------------------------------------------
+# Security Variables (Story 1B)
+#------------------------------------------------------------------------------
+
+variable "enable_versioning" {
+  type        = bool
+  default     = true
+  description = "Enable blob versioning. Replicates AWS S3 versioning functionality. When enabled, Azure maintains previous versions of blobs."
+}
+
+variable "enable_https_traffic_only" {
+  type        = bool
+  default     = true
+  description = "Enforce HTTPS-only traffic to storage account. Replicates AWS force_https_uploads policy. When true, HTTP requests are rejected."
+}
+
+variable "min_tls_version" {
+  type        = string
+  default     = "TLS1_2"
+  description = "Minimum TLS version required for requests to storage account. Recommended: TLS1_2 for security compliance."
+
+  validation {
+    condition     = contains(["TLS1_0", "TLS1_1", "TLS1_2"], var.min_tls_version)
+    error_message = "Minimum TLS version must be one of: TLS1_0, TLS1_1, TLS1_2."
+  }
+}
+
+variable "shared_access_key_enabled" {
+  type        = bool
+  default     = true
+  description = "Enable shared access key for storage account. Set to false to require Azure AD authentication only."
+}
+
+variable "soft_delete_retention_days" {
+  type        = number
+  default     = 7
+  description = "Number of days to retain soft-deleted blobs. Set to 0 to disable soft delete. Maximum: 365 days."
+
+  validation {
+    condition     = var.soft_delete_retention_days >= 0 && var.soft_delete_retention_days <= 365
+    error_message = "Soft delete retention days must be between 0 and 365."
+  }
+}
+
+variable "container_soft_delete_retention_days" {
+  type        = number
+  default     = 7
+  description = "Number of days to retain soft-deleted containers. Set to 0 to disable. Maximum: 365 days."
+
+  validation {
+    condition     = var.container_soft_delete_retention_days >= 0 && var.container_soft_delete_retention_days <= 365
+    error_message = "Container soft delete retention days must be between 0 and 365."
+  }
+}
+
+#------------------------------------------------------------------------------
+# Encryption Variables (Story 1B)
+#------------------------------------------------------------------------------
+
+variable "enable_cmk_encryption" {
+  type        = bool
+  default     = false
+  description = "Enable Customer-Managed Key (CMK) encryption via Azure Key Vault. When false, uses Platform-Managed Keys (PMK) which is Azure's default encryption."
+}
+
+variable "key_vault_key_id" {
+  type        = string
+  default     = ""
+  description = "The ID of the Key Vault Key to use for CMK encryption. Required when enable_cmk_encryption is true. Format: https://{vault-name}.vault.azure.net/keys/{key-name}/{key-version}"
+
+  validation {
+    condition = (
+      var.key_vault_key_id == "" ||
+      can(regex("^https://.*\\.vault\\.azure\\.net/keys/.*", var.key_vault_key_id))
+    )
+    error_message = "Key Vault Key ID must be a valid Azure Key Vault key URL (https://{vault-name}.vault.azure.net/keys/{key-name}/{key-version})."
+  }
+}
+
+variable "user_assigned_identity_id" {
+  type        = string
+  default     = null
+  description = "The ID of the User Assigned Identity to use for CMK encryption. Optional - if not provided, System Assigned Identity is used."
+}

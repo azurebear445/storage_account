@@ -25,9 +25,17 @@ locals {
 
   # Azure compliance tags (similar to AWS Cloud Custodian tags)
   azure_compliance_tags = {
+    # Story 1A tags
     "azure:storage_account_tier"     = var.account_tier
     "azure:storage_replication_type" = var.account_replication_type
     "azure:container_access_type"    = var.container_access_type
+
+    # Story 1B security tags
+    "azure:versioning_enabled" = tostring(var.enable_versioning)
+    "azure:https_only"         = tostring(var.enable_https_traffic_only)
+    "azure:min_tls_version"    = var.min_tls_version
+    "azure:soft_delete_days"   = tostring(var.soft_delete_retention_days)
+    "azure:encryption_type"    = var.enable_cmk_encryption ? "CMK" : "PMK"
   }
 
   # Final resource tags

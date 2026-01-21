@@ -61,3 +61,37 @@ output "blob_url_prefix" {
   value       = "${azurerm_storage_account.this.primary_blob_endpoint}${azurerm_storage_container.this.name}/"
   description = "The full URL prefix for blobs in this container."
 }
+
+#------------------------------------------------------------------------------
+# Security Outputs (Story 1B)
+#------------------------------------------------------------------------------
+
+output "versioning_enabled" {
+  value       = var.enable_versioning
+  description = "Whether blob versioning is enabled."
+}
+
+output "https_only_enabled" {
+  value       = var.enable_https_traffic_only
+  description = "Whether HTTPS-only traffic is enforced."
+}
+
+output "min_tls_version" {
+  value       = var.min_tls_version
+  description = "Minimum TLS version configured."
+}
+
+output "soft_delete_retention_days" {
+  value       = var.soft_delete_retention_days
+  description = "Blob soft delete retention period in days."
+}
+
+output "encryption_type" {
+  value       = var.enable_cmk_encryption ? "CMK" : "PMK"
+  description = "Encryption type: CMK (Customer-Managed Key) or PMK (Platform-Managed Key)."
+}
+
+output "identity_principal_id" {
+  value       = var.enable_cmk_encryption ? azurerm_storage_account.this.identity[0].principal_id : null
+  description = "The Principal ID of the System Assigned Identity (only when CMK encryption is enabled)."
+}
